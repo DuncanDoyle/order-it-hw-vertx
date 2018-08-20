@@ -1,0 +1,186 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.jbpm.cases</groupId>
+	<artifactId>order-it-hw-vertx</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<properties>
+		<!-- Properties required by vertx-maven-plugin -->
+		<fabric8-vertx-maven-plugin.version>1.0.9</fabric8-vertx-maven-plugin.version>
+		<vertx.verticle>org.jbpm.cases.vertx.MainVerticle</vertx.verticle>
+		<!-- also the default -->
+		<vertx.launcher>io.vertx.core.Launcher</vertx.launcher>
+
+		<!-- Required for the exec plugin. -->
+		<main.verticle>org.jbpm.cases.vertx.MainVerticle</main.verticle>
+		<version.io.vertx>3.5.2</version.io.vertx>
+		<resteasy.version>3.1.0.Final</resteasy.version>
+		<version.ch.qos.logback>1.2.3</version.ch.qos.logback>
+		<!-- <version.org.slf4j>1.7.16</version.org.slf4j> -->
+	</properties>
+	<dependencies>
+
+		<!-- Project domain model -->
+		<!-- <dependency> <groupId>${project.groupId}</groupId> <artifactId>drools-cep-vertx-demo-model</artifactId> 
+			<version>${project.version}</version> <scope>compile</scope> </dependency> 
+			<dependency> <groupId>${project.groupId}</groupId> <artifactId>drools-cep-vertx-demo-kjar</artifactId> 
+			<version>${project.version}</version> <scope>compile</scope> </dependency> -->
+
+		<!-- Vert.X -->
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-core</artifactId>
+			<version>${version.io.vertx}</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-web</artifactId>
+			<version>${version.io.vertx}</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-vertx</artifactId>
+			<version>${resteasy.version}</version>
+			<scope>compile</scope>
+		</dependency>
+
+
+		<!-- Jackson Mappers for date-time -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+			<version>2.9.5</version>
+			<scope>compile</scope>
+		</dependency>
+	
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.7</version>
+			<scope>compile</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>${version.ch.qos.logback}</version>
+			<scope>runtime</scope>
+		</dependency>
+
+
+
+		<!-- This is a transitive dependency of KIE-CI, but vertx:run complains 
+			with a ClassNotFound without this dependency. -->
+		<!-- <dependency> <groupId>com.google.inject</groupId> <artifactId>guice</artifactId> 
+			<type>jar</type> <scope>compile</scope> <version>4.0</version> <classifier>no_aop</classifier> 
+			</dependency> -->
+
+		<!-- <dependency> <grouIpd>org.slf4j</groupId> <artifactId>slf4j-api</artifactId> 
+			<scope>compile</scope> <version>${version.org.slf4j}</version> </dependency> -->
+	</dependencies>
+	<build>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.5.1</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<transformers>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+									<manifestEntries>
+										<Main-Class>io.vertx.core.Launcher</Main-Class>
+										<Main-Verticle>${main.verticle}</Main-Verticle>
+									</manifestEntries>
+								</transformer>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
+								</transformer>
+								<transformer
+									implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/kie.conf</resource>
+								</transformer>
+							</transformers>
+							<artifactSet>
+							</artifactSet>
+							<outputFile>${project.build.directory}/${project.artifactId}-${project.version}-fat.jar</outputFile>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.6.0</version>
+				<executions>
+					<execution>
+						<id>run</id>
+						<goals>
+							<goal>java</goal>
+						</goals>
+						<configuration>
+							<mainClass>io.vertx.core.Launcher</mainClass>
+							<arguments>
+								<argument>run</argument>
+								<argument>${main.verticle}</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>run-app</id>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<executable>java</executable>
+							<arguments>
+								<argument>-jar</argument>
+								<argument>target/${project.artifactId}-${project.version}-fat.jar</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>io.reactiverse</groupId>
+				<artifactId>vertx-maven-plugin</artifactId>
+				<version>1.0.15</version>
+				<executions>
+					<execution>
+						<id>vmp</id>
+						<goals>
+							<goal>initialize</goal>
+							<goal>package</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<redeploy>true</redeploy>
+				</configuration>
+			</plugin>
+
+		</plugins>
+	</build>
+</project>
